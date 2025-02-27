@@ -82,13 +82,16 @@ export async function handleFilePath({
     for (let i = 0; i < segments.length; i++) {
       const current = segments[i];
       const isLast = i === segments.length - 1;
-      const askTemplate = current.match(/^<-\s*ask\s*(?:\|\s*([^->]+))?\s*->$/);
+      // const askTemplate = current.match(/^<-\s*ask\s*(?:\|\s*([^->]+))?\s*->$/);
+      const askTemplate = current.match(
+        /^<-\s*ask\s*(?:\|\s*([\w.\- ]+))?\s*->$/
+      );
 
       if (askTemplate) {
         const defaultName = askTemplate[1]?.trim() || "";
 
         resolvedPath = await askForFileName({
-          message: `Enter ${isLast ? "file" : "folder"} name.`,
+          message: `Enter ${isLast && !ignoreExist ? "file" : "folder"} name.`, // If `ignoreExist` is `true`, assume it is a folder.
           defaultName,
           placeholder: `${resolvedPath}${path.sep}[${
             defaultName || "placeholder"

@@ -2,6 +2,7 @@ import { execa, type StdinOption } from "execa";
 import { logger } from "./logger";
 import { type PackageManager, getUserPkgManager } from "./getUserPkgManager";
 import { globals as G } from "./globals";
+import { prompts } from "./prompts";
 
 /**
  * Runs the install command with appropriate package manager handling.
@@ -22,6 +23,15 @@ export const installDependencies = async (
     return null;
   }
 
+  if (
+    !(await prompts.confirm({
+      message: "Are you sure to install pacakges: " + packageList.join(" "),
+      initialValue: true,
+    }))
+  ) {
+    return;
+  }
+
   switch (pkgManager) {
     case "npm":
       await execa(pkgManager, ["install", ...packageList], {
@@ -31,7 +41,8 @@ export const installDependencies = async (
       return null;
 
     case "pnpm":
-      return execWithSpinner(pkgManager, packageList, {
+      return execWithSpinner(pkgManager, {
+        args: ["add", ...packageList],
         onDataHandle: () => (data) => {
           const text = data.toString();
           if (text.includes("Progress")) {
@@ -41,14 +52,16 @@ export const installDependencies = async (
       });
 
     case "yarn":
-      return execWithSpinner(pkgManager, packageList, {
+      return execWithSpinner(pkgManager, {
+        args: ["add", ...packageList],
         onDataHandle: () => (data) => {
           logger.log(data.toString());
         },
       });
 
     case "bun":
-      return execWithSpinner(pkgManager, packageList, {
+      return execWithSpinner(pkgManager, {
+        args: ["add", ...packageList],
         stdout: "ignore",
       });
   }
@@ -59,18 +72,13 @@ export const installDependencies = async (
  */
 const execWithSpinner = async (
   pkgManager: PackageManager,
-  packages: string[],
   options: {
     args?: string[];
     stdout?: "pipe" | "ignore" | "inherit";
     onDataHandle?: () => (data: Buffer) => void;
   }
 ) => {
-  const {
-    onDataHandle,
-    args = ["add", ...packages],
-    stdout = "pipe",
-  } = options;
+  const { onDataHandle, args, stdout = "pipe" } = options;
 
   G.spinner.text = `Running ${pkgManager} install <deps>...`;
   logger.info(G.spinner.text);

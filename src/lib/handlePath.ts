@@ -84,7 +84,7 @@ export async function handleFilePath({
       const isLast = i === segments.length - 1;
       // const askTemplate = current.match(/^<-\s*ask\s*(?:\|\s*([^->]+))?\s*->$/);
       const askTemplate = current.match(
-        /^<-\s*ask\s*(?:\|\s*([\w.\- ]+))?\s*->$/
+        /^<-\s*ask\s*(?:\|\s*([a-zA-Z0-9._\- \[\]\(\)\{\}!@#$%^&+=,~]+))?\s*->$/
       );
 
       if (askTemplate) {

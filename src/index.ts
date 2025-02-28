@@ -5,13 +5,13 @@ import ora from "ora";
 // import chalk from "chalk";
 import path from "path";
 // import * as p from "@clack/prompts";
-import { logger } from "./logger";
+import { logger } from "./lib/logger";
 import chalk from "chalk";
-import { Consts, globals as G } from "./globals";
-import { sleep, withSpinner, isValidUrl } from "./helpers";
-import { prompts } from "./prompts";
-import { installDependencies } from "./installDependencies";
-import { handleFilePath } from "./handlePath";
+import { Consts, globals as G } from "./lib/globals";
+import { sleep, withSpinner, isValidUrl } from "./lib/helpers";
+import { prompts } from "./lib/prompts";
+import { installDependencies } from "./lib/installDependencies";
+import { handleFilePath } from "./lib/handlePath";
 
 /*
  * later:
@@ -36,10 +36,14 @@ program
 
     try {
       await processJson(jsonPath, options);
-      await installDependencies(RequiredNodeDependencies);
+      //! this feature is not tested
+      if (RequiredNodeDependencies && RequiredNodeDependencies.length) {
+        await installDependencies(RequiredNodeDependencies);
+      }
       G.spinner.succeed("Files added successfully!");
     } catch (error) {
       G.spinner.fail(chalk.red(`Error: ${(error as Error).message}`));
+      throw error;
     }
   });
 

@@ -12,6 +12,7 @@ import { sleep, withSpinner, isValidUrl } from "./lib/helpers";
 import { prompts } from "./lib/prompts";
 import { installDependencies } from "./lib/installDependencies";
 import { handleFilePath } from "./lib/handlePath";
+import { config } from "./lib/setting";
 
 /*
  * later:
@@ -26,7 +27,8 @@ const program = new Command();
 program
   .version("1.0.0")
   .argument("<jsonPath>", "URL or local path of the JSON file")
-  .option("-f, --force", "Force overwrite files if they already exist")
+  .option("-d, --dir <directory>", "Set working directory")
+  .option("-f, --force", "Force overwrite files if they already exist") //! not implemented
   .option(
     "-e, --extend-path <extendPath>",
     "extend files path from current working dir"
@@ -35,6 +37,11 @@ program
     G.spinner = ora("Fetching JSON...").start();
 
     try {
+      if (options.dir) {
+        process.chdir(options.dir);
+        logger.info(`Working directory: ${process.cwd()}`);
+      }
+
       await processJson(jsonPath, options);
       //! this feature is not tested
       if (RequiredNodeDependencies && RequiredNodeDependencies.length) {
@@ -164,7 +171,7 @@ async function processFile({
     }
   }
 
-  G.spinner.text = "Writing File...";
+  G.spinner.text = "writing file " + newFilePath;
   // await sleep(5000)
   if (typeof file.method === "object") {
     let existingContent = fs.readFileSync(newFilePath, "utf-8");
@@ -180,5 +187,27 @@ async function processFile({
   }
   logger.success(`✔ File processed: ${newFilePath}`);
 }
+
+program
+  .command("get <key>")
+  .description("Retrieve the value associated with a given key")
+  .action((key: keyof Settings) => {
+    const value = config.get(key);
+    if (value !== undefined) {
+      console.log(`Value for "${key}": ${value}`);
+    } else {
+      console.log(`Key "${key}" not found.`);
+    }
+  });
+
+program
+  .command("set <key> <value>")
+  .description(
+    "Assign a value to a specific key (creates or updates the key-value pair)"
+  )
+  .action((key: keyof Settings, value: Settings[typeof key]) => {
+    config.set(key, value, true);
+    console.log(`Successfully set "${key}" to "${value}".`);
+  });
 
 program.parse();

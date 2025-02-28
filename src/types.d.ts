@@ -29,4 +29,7 @@ interface JsonStructure {
 interface CliOptions {
   force?: boolean;
   extendPath?: string;
+  dir?: string;
 }
+
+type Settings = { githubToken: string };

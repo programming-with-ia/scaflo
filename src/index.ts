@@ -13,6 +13,7 @@ import { prompts } from "./lib/prompts";
 import { installDependencies } from "./lib/installDependencies";
 import { handleFilePath } from "./lib/handlePath";
 import { config } from "./lib/setting";
+import { Fetch } from "./lib/fetch";
 
 /*
  * later:
@@ -65,11 +66,9 @@ async function processJson(
 
   let jsonData: JsonStructure;
   if (isValidUrl(jsonPath)) {
-    const response = await fetch(jsonPath);
-    if (!response.ok) throw new Error("Failed to fetch JSON");
-    jsonData = await response.json();
+    jsonData = await Fetch<JsonStructure>(jsonPath, "json");
   } else {
-    jsonData = await fs.readJson(path.resolve(jsonPath));
+    jsonData = fs.readJsonSync(path.resolve(jsonPath));
   }
 
   //* handling array of files
@@ -165,7 +164,7 @@ async function processFile({
 
   if (!/\n/.test(content) /* isInline */) {
     if (isValidUrl(content)) {
-      content = await (await fetch(content)).text();
+      content = await Fetch(content, "text");
     } else if (path.isAbsolute(content)) {
       content = fs.readFileSync(content, "utf-8");
     }

@@ -2,6 +2,7 @@ type FileWriteMethods = "a" | "w" | Record<string, string>; // Append, Write (de
 
 type FileType = {
   name: string;
+  // id?: string; // used as file name. that used to replace some thing in file content when name like <-ask->
 
   /**
    * File Content

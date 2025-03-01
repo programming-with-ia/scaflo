@@ -29,7 +29,7 @@ program
   .version("1.0.0")
   .argument("<jsonPath>", "URL or local path of the JSON file")
   .option("-d, --dir <directory>", "Set working directory")
-  .option("-f, --force", "Force overwrite files if they already exist") //! not implemented
+  .option("-f, --force", "Force overwrite files if they already exist")
   .option(
     "-e, --extend-path <extendPath>",
     "extend files path from current working dir"
@@ -44,7 +44,7 @@ program
       }
 
       await processJson(jsonPath, options);
-      //! this feature is not tested
+      //! this feature is not fully tested for all package managers tested
       if (RequiredNodeDependencies && RequiredNodeDependencies.length) {
         await installDependencies(RequiredNodeDependencies);
       }
@@ -152,7 +152,7 @@ async function processFile({
   let newFilePath = await handleFilePath({
     name: file.name,
     basePath,
-    ignoreExist: file.method == "a",
+    ignoreExist: !!options.force || file.method == "a",
   });
 
   if (Consts.isCodeRed(newFilePath)) {

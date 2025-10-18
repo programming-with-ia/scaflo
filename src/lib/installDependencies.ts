@@ -3,6 +3,7 @@ import { logger } from "./logger";
 import { type PackageManager, getUserPkgManager } from "./getUserPkgManager";
 import { globals as G } from "./globals";
 import { prompts } from "./prompts";
+import { JsonStructure } from "../types";
 
 /**
  * Runs the install command with appropriate package manager handling.
@@ -12,20 +13,15 @@ export const installDependencies = async (
 ) => {
   const pkgManager = getUserPkgManager();
   // Convert input into an array of package install strings
-  const packageList = packages.flatMap((pkg) =>
-    typeof pkg === "string"
-      ? pkg
-      : Object.entries(pkg).map(([name, version]) => `${name}@${version}`)
-  );
 
-  if (packageList.length === 0) {
+  if (packages.length === 0) {
     logger.log("No packages to install.");
     return null;
   }
 
   if (
     !(await prompts.confirm({
-      message: "Are you sure to install pacakges: " + packageList.join(" "),
+      message: `Are you sure to install pacakges: ${packages.join(" ")}`,
       initialValue: true,
     }))
   ) {

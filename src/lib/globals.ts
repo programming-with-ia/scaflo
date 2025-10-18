@@ -6,6 +6,7 @@ export const globals = {
 
 export const Consts = {
   CODE_RED: -1,
+  storeFile: "scaflo.store.json",
   isCodeRed(v: any): v is -1 {
     return v == Consts.CODE_RED;
   },

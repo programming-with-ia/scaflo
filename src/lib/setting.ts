@@ -1,6 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
+import type { Settings } from "../types";
 
 class ConfigManager<T extends Record<string, unknown>, Config = Partial<T>> {
   private configPath: string;

@@ -16,7 +16,7 @@ export function withHandleCancel<T extends (...args: any[]) => Promise<any>>(
 }
 
 export const prompts = {
-  select: withSpinner(withHandleCancel(p.select)),
+  select: withSpinner(withHandleCancel(p.select)) as typeof p.select,
   text: withSpinner(withHandleCancel(p.text)),
   confirm: withSpinner(withHandleCancel(p.confirm)),
 };

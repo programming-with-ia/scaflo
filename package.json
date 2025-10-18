@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "typecheck": "tsc",
+    "typecheck": "tsc --noEmit",
     "build": "tsup",
     "dev": "tsup --watch",
     "start": "node dist/index.js",
@@ -45,6 +45,10 @@
     "typescript": "^5.7.3"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4"
+    "@biomejs/biome": "^2.2.6",
+    "@types/fs-extra": "^11.0.4",
+    "jsonc-parser": "^3.3.1",
+    "scaflo": "^0.0.4",
+    "type-fest": "^5.1.0"
   }
 }

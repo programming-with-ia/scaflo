@@ -227,3 +227,6 @@ $RECYCLE.BIN/
 tempCodeRunnerFile.*
 test
 
+/.vscode
+.idea
+/src/project-config

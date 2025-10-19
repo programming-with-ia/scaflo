@@ -1,14 +1,15 @@
 {
   "name": "scaflo",
-  "version": "0.0.4",
+  "version": "1.0.0-alpha.1",
   "description": "",
   "main": "index.js",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsup",
+    "build": "tsup && tsx ./scripts/transform.ts",
     "dev": "tsup --watch",
     "start": "node dist/index.js",
-    "dev:start": "tsx src/index.ts"
+    "dev:start": "tsx src/index.ts",
+    "release": "pnpm release-it"
   },
   "type": "module",
   "exports": "./dist/index.js",
@@ -38,17 +39,17 @@
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
     "execa": "^9.1.0",
-    "fast-glob": "^3.3.3",
     "fs-extra": "^11.3.0",
-    "ora": "^8.2.0",
-    "tsup": "^8.3.6",
-    "typescript": "^5.7.3"
+    "ora": "^8.2.0"
   },
   "devDependencies": {
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
     "@biomejs/biome": "^2.2.6",
     "@types/fs-extra": "^11.0.4",
     "jsonc-parser": "^3.3.1",
     "scaflo": "^0.0.4",
-    "type-fest": "^5.1.0"
+    "type-fest": "^5.1.0",
+    "release-it": "^19.0.5"
   }
 }

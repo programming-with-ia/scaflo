@@ -6,7 +6,10 @@ import path from "path";
 import { Command } from "commander";
 import { logger } from "./lib/logger";
 import { Consts, globals as G } from "./lib/globals";
-import { installDependencies } from "./lib/installDependencies";
+import {
+    addShadcnComponents,
+    installDependencies,
+} from "./lib/installDependencies";
 import { config } from "./lib/setting";
 import { sharedData } from "./lib/shared";
 import { processJson } from "./processJson";
@@ -50,16 +53,9 @@ program
             }
 
             //! this feature is not fully tested for all package managers tested
-            if (sharedData.nodeDependencies?.length) {
-                logger.warn("not tested for all package managers yet");
-                await installDependencies(sharedData.nodeDependencies);
-            }
-            if (sharedData.registryDependencies?.length) {
-                //! install shadcn registry
-                logger.error(
-                    `Component installation feature is temporarily unavailable. \n- reason: Automatic installation unsupported. \n- action:Manual installation required. \n- components: ${sharedData.registryDependencies.join(", ")}`,
-                );
-            }
+            await installDependencies(sharedData.nodeDependencies);
+            await addShadcnComponents(sharedData.registryDependencies);
+
             G.spinner.succeed("Files added successfully!");
         } catch (error) {
             G.spinner.fail(chalk.red(`Error: ${(error as Error).message}`));

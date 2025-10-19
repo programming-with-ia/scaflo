@@ -83,13 +83,13 @@ type ForJob<
 > = T & {
     /**
      * A unique identifier for the job. Used for referencing in `when` conditions.
-    *
-    * Examples:
-    * - `setting.theme`
-    * - `setting.theme-color`
-    * - `setting.ThemeColor`
-    * - `#ThemeColor` helpful for questions job to save value in memory
-    * - `@ThemeColor` helpful for questions job to save value in store file (and use on next time)
+     *
+     * Examples:
+     * - `setting.theme`
+     * - `setting.theme-color`
+     * - `setting.ThemeColor`
+     * - `#ThemeColor` helpful for questions job to save value in memory
+     * - `@ThemeColor` helpful for questions job to save value in store file (and use on next time)
      */
     id?: string;
     /**
@@ -163,10 +163,15 @@ type JsonStructure = {
     registryDependencies?: string[];
     /**
      * A list of Node.js dependencies to be installed.
-     * ⚠️ NOTE: This does not currently check if a package is already installed.
      */
     dependencies?: string[];
-} & RequireAtLeastOne<{ files?: FileType[]; jobs?: Job[] }, "files" | "jobs">;
+    /**
+     * An array of Jobs.
+     * Job: Represents a single executable task or a collection of tasks (a job).
+     */
+    jobs?: Job[];
+};
+// & RequireAtLeastOne<{ files?: FileType[]; jobs?: Job[] }, "files" | "jobs">;
 
 /**
  * Defines the shape of command-line options.
@@ -188,10 +193,4 @@ type Settings = {
     githubToken: string;
 };
 
-export type {
-    FileType,
-    JsonStructure,
-    CliOptions,
-    Settings,
-    Job,
-};
+export type { FileType, JsonStructure, CliOptions, Settings, Job };

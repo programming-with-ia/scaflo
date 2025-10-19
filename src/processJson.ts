@@ -28,12 +28,12 @@ export async function processJson(jsonPath: string): Promise<void> {
     }
 
     //* handling array of files
-    const hasFiles = Array.isArray(jsonData.files) && jsonData.files.length > 0;
-    const hasJobs = Array.isArray(jsonData.jobs) && jsonData.jobs.length > 0;
+    // const hasFiles = Array.isArray(jsonData.files) && jsonData.files.length > 0;
+    // const hasJobs = Array.isArray(jsonData.jobs) && jsonData.jobs.length > 0;
 
-    if (!(hasFiles || hasJobs)) {
-        throw new Error("Invalid JSON structure: Missing files array");
-    }
+    // if (!(hasFiles || hasJobs)) {
+    //     throw new Error("Invalid JSON structure: Missing files array");
+    // }
 
     const basePath = (
         cliOptions.extendPath
@@ -47,7 +47,7 @@ export async function processJson(jsonPath: string): Promise<void> {
     await processJobs({ jobs: jsonData.jobs, basePath });
 
     // process files list
-    await processFiles({ files: jsonData.files, basePath });
+    // await processFiles({ files: jsonData.files, basePath });
 
     //* handling dependencies
     if (jsonData.dependencies) {
@@ -204,19 +204,19 @@ async function processJobs({
     }
 }
 
-async function processFiles({
-    files,
-    basePath,
-}: {
-    files?: FileType[];
-    basePath: string;
-}) {
-    if (files) {
-        for (const file of files) {
-            await processFile({ file, basePath: basePath });
-        }
-    }
-}
+// async function processFiles({
+//     files,
+//     basePath,
+// }: {
+//     files?: FileType[];
+//     basePath: string;
+// }) {
+//     if (files) {
+//         for (const file of files) {
+//             await processFile({ file, basePath: basePath });
+//         }
+//     }
+// }
 
 async function processFile({
     file,

@@ -1,4 +1,4 @@
-// or use: https://github.com/shadcn-ui/ui/blob/main/packages/cli/src/utils/get-package-manager.ts
+// or use: https://github.com/shadcn-ui/ui/blob/main/packages/shadcn/src/utils/get-package-manager.ts
 
 export type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 

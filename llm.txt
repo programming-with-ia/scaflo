@@ -1,0 +1,106 @@
+--- PACKAGE SUMMARY ---
+Package Name: Scaflo
+Type: Command-Line Interface (CLI) Tool
+Primary Language: JavaScript/Node.js
+Core Function: A job-based CLI tool for automating project scaffolding. It reads a local or remote JSON file that defines a sequence of tasks (jobs) to execute.
+Key Features: Conditional logic, user prompts (questions), state management (session and persistent), dynamic file path/content generation, dependency installation (npm and registry-based like shadcn/ui), and support for private GitHub repositories.
+
+--- CLI USAGE ---
+Installation (Global): npm install -g scaflo
+Execution (without install): npx scaflo@latest <jsonPath>
+
+Base Command: scaflo <source> [options]
+- <source>: Required. A URL or local file path to the scaflo.json configuration file.
+
+CLI Options:
+- --dir, -d: Sets the working directory where the scaffolding operations will be performed.
+- --force, -f: Overwrites existing files without asking for user confirmation.
+- --extend-path, -e: Adds a prefix to the 'name' property of all 'file' type jobs. Useful for nesting generated files within a subdirectory.
+
+--- CONFIGURATION COMMANDS ---
+Purpose: To manage configuration values, such as a GitHub personal access token for private repositories.
+- Set a value: scaflo set <key> <value>
+  - Example: scaflo set githubToken ghp_yourtoken123
+- Get a value: scaflo get <key>
+  - Example: scaflo get githubToken
+
+--- SCAFLO.JSON STRUCTURE ---
+
+**Root Properties:**
+- name (string): The name of the scaffold.
+- description (string): A brief description of the scaffold's purpose.
+- dependencies (string[]): An array of npm package names to install at the beginning of the process.
+- registryDependencies (string[]): An array of registry-based components to install (e.g., shadcn/ui components).
+- jobs (Job[]): The main array of job objects to be executed sequentially.
+
+**The Job Object (Common Properties for all types):**
+- type (string): The type of job. Can be 'file', 'question', 'group', 'dependencies', or 'registryDependencies'. 'file' is the default if omitted.
+- id (string): A unique identifier for the job. Its result can be referenced by other jobs. This is REQUIRED for 'question' jobs.
+- when (string): A conditional expression. The job only runs if the expression evaluates to true.
+- confirm (string): A yes/no question to ask before running the job. If the user answers 'yes', the job proceeds. A '!' prefix (e.g., "!Are you sure?") inverts the logic, running the job on a 'no' answer.
+
+--- JOB TYPES ---
+
+**1. type: "file"**
+- Purpose: Creates, appends to, or modifies files. This is the default job type.
+- Properties:
+  - name (string): The path to the file. Can contain dynamic variables.
+  - content (string | object):
+    - For "w" or "a" method: A string of inline content, a URL to raw content, or an absolute path to a local file.
+    - For "replace" method: An object where keys are the strings to be replaced and values are the replacement strings.
+  - method (string):
+    - "w": (Default) Write mode. Overwrites the file if it exists.
+    - "a": Append mode. Adds content to the end of the file.
+    - "replace": Replaces content within the existing file.
+
+**2. type: "question"**
+- Purpose: Prompts the user for input and saves the answer in state.
+- Properties:
+  - id (string): REQUIRED. The key used to store the answer.
+    - Prefix determines storage type:
+      - '#' (e.g., "#componentName"): Session state. Lasts for the current run only.
+      - '@' (e.g., "@project.linter"): Persistent state. Saved across multiple runs.
+    - Dot notation (e.g., "project.linter") creates nested objects in the state.
+  - questionType (string):
+    - "ask": Simple text input.
+    - "confirm": A yes/no question, returns a boolean (true/false).
+    - "options": Presents a list of choices. Requires an 'options' property: { "value": "Label" }.
+  - question (string): The text to display to the user.
+  - defaultValue: The default value to use if the user provides no input.
+
+**3. type: "dependencies" & "registryDependencies"**
+- Purpose: Installs npm packages or registry components. Often used with a 'when' condition.
+- Properties:
+  - dependencies (string[]): An array of npm packages to install.
+  - registryDependencies (string[]): An array of registry components to install.
+
+**4. type: "group"**
+- Purpose: Groups multiple jobs to be run under a single condition or with a common base path.
+- Properties:
+  - base (string): An optional base path prefixed to the 'name' of all 'file' jobs within the group.
+  - jobs (Job[]): A nested array of jobs to execute if the group's conditions are met.
+
+--- ADVANCED CONCEPTS ---
+
+**Conditional Logic ("when" property):**
+The 'when' property uses a string expression to control job execution. It can access any variable stored in the state via its ID.
+- **Existence Check**: Checks if a variable is defined (meaning its corresponding job was run).
+  - "when": "#useAuth" -> Runs if the 'useAuth' question was asked.
+  - "when": "!#useAuth" -> Runs if the 'useAuth' question was skipped.
+- **Value Comparison**: Compares a variable's value.
+  - Use loose equality operators in JSON (`==`, `!=`). The engine treats them as strict (`===`, `!==`) at runtime.
+  - "when": "#framework == 'react'" -> Runs if the answer to the 'framework' question was exactly 'react'.
+  - "when": "@project.linter == true" -> Runs if the persistent 'linter' setting is the boolean true.
+
+**Dynamic File Paths & Content:**
+The 'name' and 'content' properties of 'file' jobs can be dynamic.
+- **Variables**: Use answers from questions by wrapping the question's ID in angle brackets.
+  - Example: "src/components/<#componentName>/index.tsx"
+- **Ask Placeholders**: Prompt the user for a path segment directly within the path string.
+  - `<-ask->`: Prompts the user for input (e.g., "src/<-ask->/index.js").
+  - `<-ask|defaultName->`: Prompts with a default value.
+- **Directory Shortcuts**: Special keywords that resolve to common paths.
+  - `%SRC%`: Resolves to a common source directory like 'src'.
+  - `%COMPONENTS%`: Resolves to a common components directory like 'src/components'.
+- **Content Replacement**: Variables can be used in the `content` property for replacement jobs.
+  - "content": { "%%COMPONENT_NAME%%": "<#componentName>" }

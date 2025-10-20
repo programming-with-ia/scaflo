@@ -1,76 +1,83 @@
 import type { RequireAtLeastOne, SetOptional, SetRequired } from "type-fest";
 
 /**
- * Represents a file operation. It's a discriminated union based on the `method`.
+ * Describes a file manipulation operation. This is a discriminated union
+ * based on the `method` property, which determines whether to write, append,
+ * or replace content.
  */
 type FileType = {
     /**
-     * The path of the file relative to a base directory.
+     * The path of the file, relative to the project or a `base` directory.
+     * @example "src/components/Button.tsx"
      */
     name: string;
 } & (
     | {
           /**
-           * Defines the available methods for writing to a file.
-           * - 'a': Append to the file.
-           * - 'w': Write to the file, overwriting existing content (default).
+           * The method for writing to the file.
+           * - `w` (default): Write to the file, overwriting any existing content.
+           * - `a`: Append content to the end of the file.
            */
           method?: "w" | "a";
           /**
-           * The content to write to the file. Can be a string, a URL to fetch content from,
-           * or an absolute path to another file to read content from.
+           * The content to write or append. This can be:
+           * 1. A raw string.
+           * 2. A URL to fetch content from.
+           * 3. An absolute path to a local file to read content from.
            */
           content: string;
       }
     | {
           /**
-           * Specifies that the operation is to replace content within the file.
+           * Specifies a search-and-replace operation within the file.
            */
           method: "replace";
           /**
-           * A map of key-value pairs for replacement.
-           * Each key is the string to be replaced, and its value is the new string.
-           * Example: `{ "oldValue": "newValue" }`
+           * A key-value map where each key is a string to be replaced by its
+           * corresponding value. Values can also be dynamic variables that
+           * reference answers from question jobs, using `<#id>` or `<@id>` syntax.
+           * @example { "%%THEME_COLOR%%": "<#themeColor>", "%%API_URL%%": "<@apiUrl>" }
            */
           content: Record<string, string>;
       }
 );
 
 /**
- * Defines the structure for a user prompt (question).
- * It's a discriminated union based on the `questionType`.
+ * Defines the structure for a user prompt. This is a discriminated union
+ * based on the `questionType`.
  */
 type Questions = {
-    /** The question to display to the user. */
+    /** The question text displayed to the user. */
     question: string;
-    /** A default value for the prompt. */
+    /** An optional default value for the prompt. */
     defaultValue?: string;
 } & (
     | {
           /**
-           * - 'ask': A simple text input prompt.
-           * - 'confirm': A yes/no prompt.
+           * The type of prompt to display.
+           * - `ask`: A simple text input prompt.
+           * - `confirm`: A yes/no prompt, returns a boolean.
            */
           questionType: "ask" | "confirm";
       }
     | {
           /**
-           * An options prompt (e.g., a select list).
+           * A multiple-choice prompt.
            */
           questionType: "options";
           /**
-           * A map of options to display. The key is the value to be used,
+           * A map of options to display. The key is the value returned,
            * and the value is the label shown to the user.
-           * Example: `{ "react": "React.js" }`
+           * @example { "react": "React.js", "vue": "Vue.js" }
            */
           options: Record<string, string>;
       }
 );
 
 /**
- * A generic wrapper type that adds common job properties to a specific job configuration.
- * @template T - The specific configuration object for the job (e.g., Questions, FileType).
- * @template Type - A string literal representing the job's type.
+ * A generic wrapper that adds shared properties to a job configuration.
+ * @template T The specific configuration object for the job.
+ * @template Type A string literal representing the job's type.
  */
 type ForJob<
     T extends Record<string, unknown>,
@@ -82,25 +89,37 @@ type ForJob<
         | "dependencies",
 > = T & {
     /**
-     * A unique identifier for the job. Used for referencing in `when` conditions.
+     * A unique identifier for the job. It's used to reference the job's
+     * result or state in `when` conditions.
      *
-     * Examples:
-     * - `setting.theme`
-     * - `setting.theme-color`
-     * - `setting.ThemeColor`
-     * - `#ThemeColor` helpful for questions job to save value in memory
-     * - `@ThemeColor` helpful for questions job to save value in store file (and use on next time)
+     * ---
+     *
+     * **For `question` jobs specifically**, the prefix determines storage behavior:
+     * - `#id`: The answer is stored in memory for the current session.
+     * - `@id`: The answer is persisted to a store file for future runs.
+     * - `id`: A standard identifier with no special storage behavior.
+     *
+     * For all other job types, the prefixes have no special meaning.
+     *
+     * @example "setting.theme", "#isProUser", "@userEmail"
      */
     id?: string;
     /**
-     * A conditional expression that determines if the job should run.
-     * The expression can reference the outcomes of other jobs using their IDs.
+     * A conditional expression that determines if the job should execute. It supports two forms:
      *
-     * Examples:
-     * - `!#job1`: Run if job1 was not successful.
-     * - `#job1 == 'some-value'`: Run if the result of job1 is 'some-value'.
-     * - `#job1 && #job2=='failure'`: Run if job1 was successful AND job2 failed.
-     * - `!(#job1 || #job2)`: Run if neither job1 nor job2 was successful.
+     * **1. Existence Check:**
+     * Checks only if a job has run (i.e., its result is `defined`). This is **not** a "truthy" check.
+     * - `#id` or `@id`: Condition is met if the job with this ID has a defined result.
+     * - `!#id` or `!@id`: Condition is met if the job has *not* run (its result is `undefined`).
+     *
+     * **2. JavaScript-like Expression:**
+     * A full expression for complex value comparisons.
+     * **Note**: Use the loose equality operators (`==`, `!=`) in the string;
+     * they will be executed as strict equality checks (`===`, `!==`) at runtime.
+     *
+     * @example "#useTypescript" // Run if the 'useTypescript' job was executed.
+     * @example "!#skipAdvanced" // Run if the 'skipAdvanced' job was NOT executed.
+     * @example "#framework == 'react'" // Runs if the 'framework' result is strictly equal to 'react'.
      */
     when?: string;
     /**
@@ -109,27 +128,26 @@ type ForJob<
     type: Type;
 
     /**
-     * If provided, the job requires confirmation.
-     * Standard logic: **'yes' runs the job**.
-     * Prefixing with '!' inverts the logic: **'no' runs the job**.
+     * A confirmation prompt to show before executing the job.
+     * - **Default**: Job runs if the user answers 'yes'.
+     * - **Inverted**: If the string starts with `!`, the job runs if the user answers 'no'.
      *
-     * Example:
-     * - 'Are you sure?' -> Requires 'yes'
-     * - '!Are you sure?' -> Requires 'no'
+     * @example "Are you sure you want to install this?"
+     * @example "!Skip advanced setup?"
      */
     confirm?: string;
 };
 
 /**
- * Represents a single executable task or a collection of tasks (a job).
+ * Represents a single executable task (a "job") within the scaffold process.
  * This is a union of all possible job types.
  */
 type Job =
-    /** A job that prompts the user with a question. The `id` is required to store and reference the answer. */
+    /** Prompts the user for input. An `id` is required to store and reference the answer. If a stored value with the same ID exists, the question is skipped. */
     | SetRequired<ForJob<Questions, "question">, "id">
-    /** A job that contains a nested group of other jobs. */
+    /** A container for a nested sequence of jobs. */
     | ForJob<JobsGroup, "group">
-    /** A job to install dependencies from a UI registry (e.g., shadcn/ui). Requires a `when` condition. */
+    /** Installs dependencies from a UI component registry (e.g., shadcn/ui). A `when` condition is required. */
     | SetRequired<
           ForJob<
               { registryDependencies: string[] | string },
@@ -137,67 +155,63 @@ type Job =
           >,
           "when"
       >
-    /** A job to install npm packages. Requires a `when` condition. */
+    /** Installs npm packages. A `when` condition is required. */
     | SetRequired<
           ForJob<{ dependencies: string[] | string }, "dependencies">,
           "when"
       >
-    /**
-     * A job to perform a file operation.
-     * The `type` property is optional and defaults to 'file'.
-     */
+    /** Performs a file operation (write, append, or replace). The `type` property defaults to 'file'. */
     | SetOptional<ForJob<FileType, "file">, "type">;
 
 /**
- * Defines a group of jobs that can be executed together.
+ * Defines a group of jobs that can be executed together, often sharing a
+ * common context like a base path.
  */
 type JobsGroup = {
-    /** An array of jobs to execute. */
+    /** An array of `Job` objects to be executed sequentially. */
     jobs: Job[];
-    /** An optional base path for file operations within this group. */
+    /** An optional base path that prefixes all file paths within this group. */
     base?: string;
 };
 
 /**
- * The root structure of the entire configuration JSON file.
+ * Defines the root structure for a scaffold configuration file.
  */
 type JsonStructure = {
-    /** The name of the scaffold. */
+    /** The internal name of the scaffold. */
     name?: string;
     /** A user-friendly title for the scaffold. */
     title?: string;
-    /** The version of the scaffold. */
+    /** The semantic version of the scaffold. */
     version?: string;
-    /** A brief description of what the scaffold does. */
+    /** A brief summary of what the scaffold does. */
     description?: string;
-    /** A list of registry dependencies (e.g., for shadcn/ui) to be installed. */
+    /** A list of UI registry dependencies (e.g., from shadcn/ui) to be installed. */
     registryDependencies?: string[];
     /**
-     * A list of Node.js dependencies to be installed.
+     * A list of npm packages to be installed.
      */
     dependencies?: string[];
     /**
-     * An array of Jobs.
-     * Job: Represents a single executable task or a collection of tasks (a job).
+     * The primary array of jobs to be executed by the scaffolder.
      */
     jobs?: Job[];
 };
-// & RequireAtLeastOne<{ files?: FileType[]; jobs?: Job[] }, "files" | "jobs">;
 
 /**
- * Defines the shape of command-line options.
+ * Defines the shape of command-line interface (CLI) options.
  */
 type CliOptions = {
-    /** If true, overwrite existing files without prompting. */
+    /** If true, overwrite existing files without prompting. @default false */
     force?: boolean;
-    /** An additional path segment to extend the output directory. */
+    /** An additional path segment to append to the output directory. */
     extendPath?: string;
     /** The target directory for the scaffolding operation. */
     dir?: string;
 };
 
 /**
- * Defines user-specific settings.
+ * Defines user-specific settings, typically from a global configuration file.
  */
 type Settings = {
     /** A GitHub personal access token, used for operations requiring API authentication. */

@@ -11,6 +11,7 @@ import { evaluateWhen } from "./lib/evaluateWhen";
 import { prompts } from "./lib/prompts";
 import { parseVar } from "./lib/match-vars";
 import { setDeepValue } from "./lib/utils";
+import { json } from "stream/consumers";
 
 export async function processJson(jsonPath: string): Promise<void> {
     //
@@ -64,6 +65,9 @@ export async function processJson(jsonPath: string): Promise<void> {
             }
         }
     }
+    if (jsonData.registryDependencies) {
+        sharedData.registryDependencies.push(...jsonData.registryDependencies);
+    }
 }
 
 async function processJobs({
@@ -73,151 +77,154 @@ async function processJobs({
     jobs?: Job[];
     basePath: string;
 }) {
-    if (jobs) {
-        for (const job of jobs) {
-            const { when, id, confirm } = job;
+    if (!jobs) {
+        return;
+    }
+
+    for (const job of jobs) {
+        const { when, id, confirm } = job;
+
+        if (
+            (id && id in sharedData.jobResults) || // ignore same jobs, helpful when same job from multiple dependencies
+            (when &&
+                !evaluateWhen(when, {
+                    data: sharedData.jobResults,
+                    settings: sharedData.storedData,
+                }))
+        ) {
+            continue;
+        }
+
+        if (confirm) {
+            let initialValue: boolean = true;
+            let _confirm = confirm;
+
+            if (_confirm.startsWith("!")) {
+                _confirm = confirm.slice(1);
+                initialValue = false;
+            }
+            const ans = await prompts.confirm({
+                message: _confirm,
+                initialValue: initialValue,
+            });
+
+            if (ans !== initialValue) {
+                continue;
+            }
+        }
+
+        //
+        if (!job.type || job.type === "file") {
+            await processFile({ file: job, basePath });
+            //
+            // handle question
+        } else if (job.type === "question") {
+            //* sharedData.jobResults
+            const { defaultValue, question, id, questionType } = job;
+            let answer: symbol | boolean | string = "";
+
+            console.log("");
+            // if startswith @ and in sharedData.storedData
+            // if startswith # and in sharedData.jobResults
+            // if not startswith @ | # and in sharedData.jobResults
+
+            let prefix: string = "#";
+            let _id = id;
+            if (id.startsWith("@") || id.startsWith("#")) {
+                prefix = id.charAt(0);
+                _id = id.slice(1);
+            }
 
             if (
-                (id && id in sharedData.jobResults) || // ignore same jobs, helpful when same job from multiple dependencies
-                (when &&
-                    !evaluateWhen(when, {
-                        data: sharedData.jobResults,
-                        settings: sharedData.storedData,
-                    }))
+                getValueFromSource(
+                    _id,
+                    prefix === "#" ? "memory" : "store",
+                    undefined,
+                    false,
+                ) !== undefined
             ) {
                 continue;
             }
 
-            if (confirm) {
-                let initialValue: boolean = true;
-                let _confirm = confirm;
-
-                if (_confirm.startsWith("!")) {
-                    _confirm = confirm.slice(1);
-                    initialValue = false;
-                }
-                const ans = await prompts.confirm({
-                    message: _confirm,
-                    initialValue: initialValue,
+            if (questionType === "ask") {
+                answer = await prompts.text({
+                    message: question,
+                    defaultValue: defaultValue,
+                    placeholder: defaultValue
+                        ? "default: " + defaultValue
+                        : undefined,
                 });
-
-                if (ans !== initialValue) {
-                    continue;
-                }
+            } else if (questionType === "confirm") {
+                answer = await prompts.confirm({
+                    message: question,
+                    initialValue: defaultValue === "true",
+                });
+            } else if (questionType === "options") {
+                answer = await prompts.select({
+                    message: question,
+                    initialValue: defaultValue,
+                    options: Object.entries(job.options).map(
+                        ([key, value]) => ({
+                            label: value,
+                            value: key,
+                        }),
+                    ),
+                });
+            } else {
+                throw new Error(`Invalid question type '${questionType}'`);
             }
 
             //
-            if (!job.type || job.type === "file") {
-                await processFile({ file: job, basePath });
-                //
-                // handle question
-            } else if (job.type === "question") {
-                //* sharedData.jobResults
-                const { defaultValue, question, id, questionType } = job;
-                let answer: symbol | boolean | string = "";
+            setDeepValue(
+                prefix === "#"
+                    ? sharedData.jobResults
+                    : sharedData.storedData,
+                _id,
+                String(answer),
+            );
 
-                console.log("");
-                // if startswith @ and in sharedData.storedData
-                // if startswith # and in sharedData.jobResults
-                // if not startswith @ | # and in sharedData.jobResults
-
-                let prefix: string = "#";
-                let _id = id;
-                if (id.startsWith("@") || id.startsWith("#")) {
-                    prefix = id.charAt(0);
-                    _id = id.slice(1);
-                }
-
-                if (
-                    getValueFromSource(
-                        _id,
-                        prefix === "#" ? "memory" : "store",
-                        undefined,
-                        false,
-                    ) !== undefined
-                ) {
-                    continue;
-                }
-
-                if (questionType === "ask") {
-                    answer = await prompts.text({
-                        message: question,
-                        defaultValue: defaultValue,
-                        placeholder: defaultValue
-                            ? "default: " + defaultValue
-                            : undefined,
-                    });
-                } else if (questionType === "confirm") {
-                    answer = await prompts.confirm({
-                        message: question,
-                        initialValue: defaultValue === "true",
-                    });
-                } else if (questionType === "options") {
-                    answer = await prompts.select({
-                        message: question,
-                        initialValue: defaultValue,
-                        options: Object.entries(job.options).map(
-                            ([key, value]) => ({
-                                label: value,
-                                value: key,
-                            }),
-                        ),
-                    });
-                } else {
-                    throw new Error(`Invalid question type '${questionType}'`);
-                }
-
-                //
-                setDeepValue(
-                    prefix === "#"
-                        ? sharedData.jobResults
-                        : sharedData.storedData,
-                    _id,
-                    String(answer),
+            //
+            // handle jobs group
+        } else if (job.type === "group") {
+            let _basePath = basePath;
+            if (job.base) {
+                _basePath = (await handleFilePath({
+                    name: path.join(_basePath, job.base),
+                    ignoreExist: true,
+                })) as string;
+            }
+            await processJobs({ jobs: job.jobs, basePath: _basePath });
+        } else if (job.type === "registryDependencies") {
+            if (typeof job.registryDependencies === "string") {
+                job.registryDependencies = [job.registryDependencies];
+            }
+            if (Array.isArray(job.registryDependencies)) {
+                sharedData.registryDependencies.push(
+                    ...job.registryDependencies,
                 );
-
-                //
-                // handle jobs group
-            } else if (job.type === "group") {
-                if (job.base) {
-                    basePath = (await handleFilePath({
-                        name: path.join(basePath, job.base),
-                        ignoreExist: true,
-                    })) as string;
-                }
-                await processJobs({ jobs: job.jobs, basePath });
-            } else if (job.type === "registryDependencies") {
-                if (typeof job.registryDependencies === "string") {
-                    job.registryDependencies = [job.registryDependencies];
-                }
-                if (Array.isArray(job.registryDependencies)) {
-                    sharedData.registryDependencies.push(
-                        ...job.registryDependencies,
-                    );
-                } else {
-                    throw new Error(
-                        `Invalid registryDependencies type: ${typeof job.registryDependencies}`,
-                    );
-                }
-                //
-            } else if (job.type === "dependencies") {
-                if (typeof job.dependencies === "string") {
-                    job.dependencies = [job.dependencies];
-                }
-                if (Array.isArray(job.dependencies)) {
-                    sharedData.nodeDependencies.push(...job.dependencies);
-                } else {
-                    throw new Error(
-                        `Invalid dependencies type: ${typeof job.dependencies}`,
-                    );
-                }
             } else {
-                throw new Error(`Invalid job type '${job.type}'`);
+                throw new Error(
+                    `Invalid registryDependencies type: ${typeof job.registryDependencies}`,
+                );
             }
+            //
+        } else if (job.type === "dependencies") {
+            if (typeof job.dependencies === "string") {
+                job.dependencies = [job.dependencies];
+            }
+            if (Array.isArray(job.dependencies)) {
+                sharedData.nodeDependencies.push(...job.dependencies);
+            } else {
+                throw new Error(
+                    `Invalid dependencies type: ${typeof job.dependencies}`,
+                );
+            }
+        } else {
+            throw new Error(`Invalid job type '${job.type}'`);
+        }
 
-            if (id) {
-                sharedData.jobResults[id] = sharedData.jobResults[id] ?? "";
-            }
+        if (id) {
+            sharedData.jobResults[id] = sharedData.jobResults[id] ?? "";
         }
     }
 }

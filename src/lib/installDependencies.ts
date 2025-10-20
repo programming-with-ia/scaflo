@@ -186,27 +186,27 @@ export const addShadcnComponents = async (components: string[]) => {
     switch (pkgManager) {
         case "pnpm":
             command = "pnpm";
-            args = ["dlx", "shadcn-ui@latest", ...componentArgs];
+            args = ["dlx", "shadcn@latest", ...componentArgs];
             break;
         case "yarn":
             command = "yarn";
-            args = ["dlx", "shadcn-ui@latest", ...componentArgs];
+            args = ["dlx", "shadcn@latest", ...componentArgs];
             break;
         case "bun":
             command = "bunx";
-            args = ["--bun", "shadcn-ui@latest", ...componentArgs];
+            args = ["--bun", "shadcn@latest", ...componentArgs];
             break;
         case "npm":
         default:
             command = "npx";
-            args = ["shadcn-ui@latest", ...componentArgs];
+            args = ["shadcn@latest", ...componentArgs];
             break;
     }
 
     await execWithSpinner(command, {
         args,
         stdout: "inherit",
-        startMessage: `Adding shadcn-ui components: ${components.join(", ")}`,
+        startMessage: `Adding shadcn components: ${components.join(", ")}`,
         successMessage: `Successfully added component(s)!`,
     });
 };

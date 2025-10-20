@@ -107,6 +107,17 @@ type ForJob<
      * The type of the job.
      */
     type: Type;
+
+    /**
+     * If provided, the job requires confirmation.
+     * Standard logic: **'yes' runs the job**.
+     * Prefixing with '!' inverts the logic: **'no' runs the job**.
+     *
+     * Example:
+     * - 'Are you sure?' -> Requires 'yes'
+     * - '!Are you sure?' -> Requires 'no'
+     */
+    confirm?: string;
 };
 
 /**

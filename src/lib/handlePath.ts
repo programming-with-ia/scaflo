@@ -27,6 +27,7 @@ export async function handleFilePath({
         const templatePaths = {
             "%SRC%": srcDir,
             "%COMPONENTS%": path.join(srcDir, "components"),
+            "%HOOKS%": path.join(srcDir, "hooks"),
         };
 
         let fullFPath = path.join(basePath ?? "", fpath);
@@ -104,6 +105,7 @@ export async function handleFilePath({
             if (_askTemplate.match) {
                 const defaultName = _askTemplate.default || "";
 
+                //! no need this feature
                 const templateValue = _askTemplate.varName
                     ? getValueFromSource(
                           _askTemplate.varName,

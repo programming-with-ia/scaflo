@@ -75,7 +75,7 @@ async function processJobs({
 }) {
     if (jobs) {
         for (const job of jobs) {
-            const { when, id } = job;
+            const { when, id, confirm } = job;
 
             if (
                 (id && id in sharedData.jobResults) || // ignore same jobs, helpful when same job from multiple dependencies
@@ -86,6 +86,24 @@ async function processJobs({
                     }))
             ) {
                 continue;
+            }
+
+            if (confirm) {
+                let initialValue: boolean = true;
+                let _confirm = confirm;
+
+                if (_confirm.startsWith("!")) {
+                    _confirm = confirm.slice(1);
+                    initialValue = false;
+                }
+                const ans = await prompts.confirm({
+                    message: _confirm,
+                    initialValue: initialValue,
+                });
+
+                if (ans !== initialValue) {
+                    continue;
+                }
             }
 
             //

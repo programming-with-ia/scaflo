@@ -1,4 +1,9 @@
-import type { RequireAtLeastOne, SetOptional, SetRequired } from "type-fest";
+import type {
+    RequireAtLeastOne,
+    SetOptional,
+    SetRequired,
+    Except,
+} from "type-fest";
 
 /**
  * Describes a file manipulation operation. This is a discriminated union
@@ -86,7 +91,9 @@ type ForJob<
         | "group"
         | "file"
         | "registryDependencies"
-        | "dependencies",
+        | "dependencies"
+        | "run"
+        | "log",
 > = T & {
     /**
      * A unique identifier for the job. It's used to reference the job's
@@ -161,7 +168,17 @@ type Job =
           "when"
       >
     /** Performs a file operation (write, append, or replace). The `type` property defaults to 'file'. */
-    | SetOptional<ForJob<FileType, "file">, "type">;
+    | SetOptional<ForJob<FileType, "file">, "type">
+    /** Execute a job from the `definitions` map */
+    | ForJob<{ target: string }, "run">
+    /** Displays a custom message in the terminal. */
+    | ForJob<
+          {
+              logLevel?: "error" | "warn" | "info" | "success" | "log"; // default: "log"
+              message: string;
+          },
+          "log"
+      >;
 
 /**
  * Defines a group of jobs that can be executed together, often sharing a
@@ -196,6 +213,11 @@ type JsonStructure = {
      * The primary array of jobs to be executed by the scaffolder.
      */
     jobs?: Job[];
+
+    /**
+     * A collection of reusable job definitions that can be referenced.
+     */
+    definitions?: Record<string, Except<Job, "when">>;
 };
 
 /**

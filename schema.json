@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "JsonStructure",
+  "description": "Defines the root structure for a scaffold configuration file.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The internal name of the scaffold."
+    },
+    "title": {
+      "type": "string",
+      "description": "A user-friendly title for the scaffold."
+    },
+    "version": {
+      "type": "string",
+      "description": "The semantic version of the scaffold."
+    },
+    "description": {
+      "type": "string",
+      "description": "A brief summary of what the scaffold does."
+    },
+    "registryDependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "A list of UI registry dependencies (e.g., from shadcn/ui) to be installed."
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "A list of npm packages to be installed."
+    },
+    "jobs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/job" },
+      "description": "The primary array of jobs to be executed by the scaffolder."
+    },
+    "definitions": {
+      "type": "object",
+      "additionalProperties": {
+        "allOf": [
+          { "$ref": "#/$defs/job" },
+          {
+            "properties": { "when": false },
+            "description": "Job definitions cannot contain a 'when' property."
+          }
+        ]
+      },
+      "description": "A collection of reusable job definitions that can be referenced."
+    }
+  },
+  "$defs": {
+    "stringOrArray": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "job": {
+      "description": "Represents a single executable task (a 'job') within the scaffold process.",
+      "oneOf": [
+        { "$ref": "#/$defs/questionJob" },
+        { "$ref": "#/$defs/groupJob" },
+        { "$ref": "#/$defs/registryDependenciesJob" },
+        { "$ref": "#/$defs/dependenciesJob" },
+        { "$ref": "#/$defs/runJob" },
+        { "$ref": "#/$defs/logJob" },
+        { "$ref": "#/$defs/fileJob" }
+      ]
+    },
+    "jobBase": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "A unique identifier for the job. Prefixes # and @ have special meaning for 'question' jobs."
+        },
+        "when": {
+          "type": "string",
+          "description": "A conditional expression that determines if the job should execute."
+        },
+        "confirm": {
+          "type": "string",
+          "description": "A confirmation prompt to show before executing the job."
+        }
+      }
+    },
+    "questionJob": {
+      "description": "Prompts the user for input. An `id` is required.",
+      "allOf": [
+        { "$ref": "#/$defs/jobBase" },
+        {
+          "properties": {
+            "type": { "const": "question" },
+            "question": {
+              "type": "string",
+              "description": "The question text displayed to the user."
+            },
+            "defaultValue": {
+              "type": "string",
+              "description": "An optional default value for the prompt."
+            }
+          },
+          "required": ["question"]
+        },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "questionType": { "enum": ["ask", "confirm"] }
+              },
+              "required": ["questionType"]
+            },
+            {
+              "properties": {
+                "questionType": { "const": "options" },
+                "options": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" },
+                  "description": "A map of options to display."
+                }
+              },
+              "required": ["questionType", "options"]
+            }
+          ]
+        }
+      ],
+      "required": ["id", "type"]
+    },
+    "groupJob": {
+      "description": "A container for a nested sequence of jobs.",
+      "allOf": [
+        { "$ref": "#/$defs/jobBase" },
+        {
+          "properties": {
+            "type": { "const": "group" },
+            "jobs": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/job" },
+              "description": "An array of `Job` objects to be executed sequentially."
+            },
+            "base": {
+              "type": "string",
+              "description": "An optional base path that prefixes all file paths within this group."
+            }
+          },
+          "required": ["jobs"]
+        }
+      ],
+      "required": ["type"]
+    },
+    "registryDependenciesJob": {
+      "description": "Installs dependencies from a UI component registry. A `when` condition is required.",
+      "allOf": [
+        { "$ref": "#/$defs/jobBase" },
+        {
+          "properties": {
+            "type": { "const": "registryDependencies" },
+            "registryDependencies": { "$ref": "#/$defs/stringOrArray" }
+          },
+          "required": ["registryDependencies"]
+        }
+      ],
+      "required": ["when", "type"]
+    },
+    "dependenciesJob": {
+      "description": "Installs npm packages. A `when` condition is required.",
+      "allOf": [
+        { "$ref": "#/$defs/jobBase" },
+        {
+          "properties": {
+            "type": { "const": "dependencies" },
+            "dependencies": { "$ref": "#/$defs/stringOrArray" }
+          },
+          "required": ["dependencies"]
+        }
+      ],
+      "required": ["when", "type"]
+    },
+    "runJob": {
+      "description": "Executes a job from the `definitions` map.",
+      "allOf": [
+        { "$ref": "#/$defs/jobBase" },
+        {
+          "properties": {
+            "type": { "const": "run" },
+            "target": { "type": "string" }
+          },
+          "required": ["target"]
+        }
+      ],
+      "required": ["type"]
+    },
+    "logJob": {
+      "description": "Displays a custom message in the terminal.",
+      "allOf": [
+        { "$ref": "#/$defs/jobBase" },
+        {
+          "properties": {
+            "type": { "const": "log" },
+            "message": { "type": "string" },
+            "logLevel": {
+              "enum": ["error", "warn", "info", "success", "log"],
+              "default": "log"
+            }
+          },
+          "required": ["message"]
+        }
+      ],
+      "required": ["type"]
+    },
+    "fileJob": {
+      "description": "Performs a file operation (write, append, or replace). The 'type' property defaults to 'file'.",
+      "allOf": [
+        { "$ref": "#/$defs/jobBase" },
+        {
+          "properties": {
+            "type": { "const": "file" },
+            "name": {
+              "type": "string",
+              "description": "The path of the file, relative to the project or a `base` directory."
+            }
+          },
+          "required": ["name"]
+        },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "method": {
+                  "enum": ["w", "a"],
+                  "description": "Method for writing: 'w' (write/overwrite) or 'a' (append)."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "The content to write or append (raw string, URL, or local file path)."
+                }
+              },
+              "required": ["content"]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "replace",
+                  "description": "Specifies a search-and-replace operation."
+                },
+                "content": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" },
+                  "description": "A key-value map for search-and-replace operations."
+                }
+              },
+              "required": ["method", "content"]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

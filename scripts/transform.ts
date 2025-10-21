@@ -6,7 +6,7 @@ const projectRoot = process.cwd();
 const sourceDir = path.join(projectRoot, "test");
 const destDir = path.join(sourceDir, "dist");
 
-fs.removeSync(destDir)
+fs.removeSync(destDir);
 
 /**
  * function to build test assets using synchronous methods.

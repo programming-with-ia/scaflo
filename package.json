@@ -29,7 +29,8 @@
     "CHANGELOG.md",
     "pnpm-lock.yaml",
     "package.json",
-    "types.d.ts"
+    "types.d.ts",
+    "schema.json"
   ],
   "keywords": [],
   "author": "",

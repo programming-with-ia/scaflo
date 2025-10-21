@@ -70,6 +70,7 @@ The power of Scaflo comes from its JSON structure. At its core, it's a list of *
 | `dependencies`       | `string[]` | A list of npm packages to install at the start.             |
 | `registryDependencies` | `string[]` | A list of registry components (e.g., shadcn/ui) to install. |
 | `jobs`               | `Job[]`    | The array of jobs to execute sequentially. This is the heart of Scaflo. |
+| `definitions`        | `Record<string, Except<Job, "when">>`    | A collection of reusable job definitions that can be referenced. ([see `run`](#run) below) |
 
 ### **The Job Object**
 
@@ -127,6 +128,37 @@ Prompts the user for input and stores the answer for later use. **A unique `id` 
       - `"confirm"`: A `true`/`false` (yes/no) question.
       - `"options"`: Presents a list of choices. Requires an `options` object: `{ "value": "Label" }`.
 
+### **`log`**
+
+Displays a message to the console during execution. This is useful for providing status updates, warnings, or instructions to the user.
+
+```json
+{
+  "jobs": [
+    {
+      "type": "question",
+      "id": "#projectName",
+      "question": "What is your project's name?",
+      "defaultValue": "my-awesome-project"
+    },
+    {
+      "type": "log",
+      "logLevel": "info",
+      "message": "Starting setup..."
+    },
+    // ... other jobs ...
+    {
+      "type": "log",
+      "logLevel": "success",
+      "message": "✅ Project has been successfully created!"
+    }
+  ]
+}
+```
+
+  - `message`: The string to display in the console.
+  - `logLevel`: (Optional) The style of the log. Can be `info`, `warn`, `error`, `success`, or `log` (default).
+
 ### **`dependencies` & `registryDependencies`**
 
 Installs packages. These jobs are most powerful when combined with a [`when` condition](#conditional-logic-when).
@@ -154,6 +186,30 @@ A special job that contains a nested `jobs` array and an optional `base` path. I
   ]
 }
 ```
+
+### **`run`**
+
+Executes a reusable job from the top-level `definitions` map. This allows you to define a piece of logic once and run it from multiple places, keeping your configuration clean and easy to manage.
+
+```json
+{
+  "definitions": {
+    "createUseMouseHook": {
+      "type": "file",
+      "name": "src/hooks/useMouse.ts",
+      "content": "export const useMouse = () => {\n  \\ ...\n};"
+    }
+  },
+  "jobs": [
+    {
+      "type": "run",
+      "target": "createUseMouseHook", // run `createUseMouseHook` job from `definitions`.
+    }
+  ]
+}
+```
+  - `target`: The key of the job to execute from the definitions object.
+
 
 -----
 

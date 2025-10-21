@@ -65,6 +65,7 @@ export async function processJson(jsonPath: string): Promise<void> {
 async function processJobs({
     jobs,
     basePath,
+    definitions,
 }: {
     jobs?: Job[];
     basePath: string;
@@ -75,7 +76,7 @@ async function processJobs({
     }
 
     for (const job of jobs) {
-        await processJob({ job, basePath });
+        await processJob({ job, basePath, definitions });
     }
 }
 
@@ -219,15 +220,16 @@ async function processJob({
                 `Invalid dependencies type: ${typeof job.dependencies}`,
             );
         }
-    } else if (
-        job.type === "run" &&
-        Object.keys(definitions ?? {}).includes(job.target)
-    ) {
-        await processJob({
-            job: definitions![job.target] as Job,
-            basePath,
-            definitions,
-        });
+    } else if (job.type === "run") {
+        if (Object.keys(definitions ?? {}).includes(job.target)) {
+            await processJob({
+                job: definitions![job.target] as Job,
+                basePath,
+                definitions,
+            });
+        } else {
+            logger.warn(`Job not found: ${job.target}`);
+        }
     } else if (job.type === "log") {
         logger[job.logLevel ?? "log"](job.message);
     } else {

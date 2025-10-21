@@ -56,27 +56,6 @@ function buildTestAssetsSync() {
             });
         }
 
-        console.log("\nProcessing schema.json...");
-        const schemaSourcePath = path.join(sourceDir, "schema.json");
-        const schemaDestPath = path.join(destDir, "schema.json");
-
-        try {
-            fs.copySync(schemaSourcePath, schemaDestPath);
-            console.log(`✅ Copied: schema.json -> dist/schema.json`);
-        } catch (error) {
-            if (
-                error instanceof Error &&
-                "code" in error &&
-                error.code === "ENOENT"
-            ) {
-                console.warn(
-                    `⚠️ 'schema.json' not found in '${sourceDir}'. Skipping copy.`,
-                );
-            } else {
-                console.error("❌ Error copying schema.json:", error);
-            }
-        }
-
         console.log("\n✨ Build complete!");
     } catch (error) {
         console.error(
